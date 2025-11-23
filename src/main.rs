@@ -80,8 +80,10 @@ async fn main() -> Result<()> {
         info!("Control server: default Tailscale");
     }
 
-    // Connect to Tailscale (unless in dev mode)
-    if !args.no_vpn {
+    // Connect to Tailscale (unless in dev mode or tailscale not available)
+    let no_vpn = args.no_vpn || !TailscaleManager::is_available();
+
+    if !no_vpn {
         let mut ts_manager = TailscaleManager::new(hostname, authkey, control_url);
 
         ts_manager.connect()?;
@@ -111,7 +113,11 @@ async fn main() -> Result<()> {
             std::process::exit(0);
         });
     } else {
-        info!("⚠️  Running in dev mode (no VPN)");
+        if !TailscaleManager::is_available() {
+            info!("⚠️  Tailscale not found, running without VPN");
+        } else {
+            info!("⚠️  Running in dev mode (no VPN)");
+        }
     }
 
     // Start SOCKS5 server

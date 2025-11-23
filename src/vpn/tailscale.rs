@@ -22,6 +22,17 @@ impl TailscaleManager {
         }
     }
 
+    /// Check if tailscale command is available
+    pub fn is_available() -> bool {
+        Command::new("tailscale")
+            .arg("version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    }
+
     pub fn connect(&mut self) -> Result<()> {
         info!("Connecting to Tailscale network...");
         debug!("Hostname: {}", self.hostname);

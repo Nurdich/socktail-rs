@@ -1,12 +1,9 @@
-//! VPN integration (Tailscale)
+//! VPN integration (Tailscale) - Pure Rust implementation
 
-pub mod tailscale;
+pub mod tailscale_rust;
 
-#[cfg(feature = "native-tailscale")]
-pub mod tailscale_native;
+// Re-export pure Rust implementation as the default
+pub use tailscale_rust::TailscaleRust;
 
-pub use tailscale::TailscaleManager;
-
-#[cfg(feature = "native-tailscale")]
-pub use tailscale_native::TailscaleNative;
-
+// Type alias for backward compatibility
+pub type TailscaleNative = TailscaleRust;

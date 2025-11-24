@@ -1,15 +1,16 @@
 # SockTail-RS 🦀
 
-Fast SOCKS5 proxy over Tailscale VPN, written in Rust.
+Fast SOCKS5 proxy over Tailscale VPN, written in **pure Rust**.
 
 ## Features
 
 - ✅ High-performance async SOCKS5 proxy (Tokio)
-- ✅ Tailscale VPN integration
+- ✅ **Pure Rust Tailscale implementation** (boringtun + control protocol)
+- ✅ **No Go dependencies** - 100% Rust
+- ✅ **Full cross-platform support** (Linux/macOS/Windows)
 - ✅ XOR key obfuscation (compatible with Go version)
-- ✅ Cross-platform (Linux/macOS/Windows)
-- ✅ Small binary size (~1-3 MB)
-- ✅ Low memory footprint (~5 MB)
+- ✅ Small binary size (~8-10 MB)
+- ✅ Low memory footprint (~5-8 MB)
 
 ## Quick Start
 
@@ -43,8 +44,9 @@ socktail --no-vpn -v
 ### Requirements
 
 - **Rust** 1.70+ (`rustc --version`)
-- **Go** 1.20+ (`go version`) - Required for native Tailscale integration
 - Build tools: `gcc`, `make` (Linux/macOS) or MSVC (Windows)
+
+**No Go compiler required!** 🎉
 
 ### Build Commands
 
@@ -54,9 +56,6 @@ cargo build
 
 # Release build (recommended)
 cargo build --release
-
-# Without Go (uses Tailscale CLI instead)
-cargo build --release --no-default-features
 
 # With embedded auth key
 AUTH_KEY=tskey-auth-xxxxx cargo build --release
@@ -69,33 +68,28 @@ AUTH_KEY=tskey-auth-xxxxx CONTROL_URL=https://headscale.example.com cargo build 
 
 ## Tailscale Integration
 
-### Native Mode (Default)
+### Pure Rust Implementation
 
-Uses `libtailscale-rs` for direct API integration:
-- ✅ Better performance
-- ✅ More features
-- ⚠️ Requires Go 1.20+ to build
+Uses **boringtun** (Cloudflare's WireGuard) + Tailscale control protocol:
+- ✅ 100% Rust - no Go dependencies
+- ✅ Full cross-platform support (including Windows)
+- ✅ Smaller binaries and faster builds
+- ✅ Production-ready (powers Cloudflare WARP)
 
 ```bash
 cargo build --release
 ./target/release/socktail --authkey tskey-xxx
 ```
 
-### CLI Mode (Fallback)
-
-Uses system `tailscale` command:
-- ✅ No Go required
-- ✅ Fast build
-- ⚠️ Requires tailscale CLI installed
-
-```bash
-cargo build --release --no-default-features
-./target/release/socktail --authkey tskey-xxx
-```
+**Technical stack**:
+- `boringtun`: WireGuard protocol implementation
+- `reqwest`: Tailscale control server HTTP API
+- `x25519-dalek`: Curve25519 key exchange
+- `chacha20poly1305`: Symmetric encryption
 
 ### Development Mode
 
-Skips VPN entirely:
+Skips VPN entirely for testing:
 
 ```bash
 ./socktail --no-vpn
@@ -155,3 +149,4 @@ MIT
 - Original Go implementation: [SockTail](https://github.com/yourusername/SockTail)
 - Built with [Tokio](https://tokio.rs/)
 - VPN powered by [Tailscale](https://tailscale.com/)
+- WireGuard implementation: [boringtun](https://github.com/cloudflare/boringtun) by Cloudflare

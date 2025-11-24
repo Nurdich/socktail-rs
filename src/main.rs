@@ -107,13 +107,13 @@ async fn main() -> Result<()> {
             // Connect
             ts.connect()?;
 
-            // Get and display IP addresses
-            match ts.get_ips() {
-                Ok(ips) => {
-                    info!("✅ Tailscale IPs: {}", ips);
+            // Get and display loopback information
+            match ts.get_loopback() {
+                Ok(loopback) => {
+                    info!("✅ Tailscale loopback: {}", loopback);
                 }
                 Err(e) => {
-                    error!("Failed to get Tailscale IPs: {}", e);
+                    error!("Failed to get Tailscale loopback: {}", e);
                 }
             }
 

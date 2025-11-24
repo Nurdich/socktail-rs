@@ -29,7 +29,7 @@ socktail (我们的 Rust 应用)
    rustc --version
    ```
 
-2. **Go** 1.20+
+2. **Go** 1.20+ (仅 Linux/macOS 需要，用于 native-tailscale)
    ```bash
    go version
    ```
@@ -38,6 +38,17 @@ socktail (我们的 Rust 应用)
    - Linux: `gcc`, `make`
    - macOS: Xcode Command Line Tools
    - Windows: MSVC 或 MinGW
+
+### ⚠️ Windows 特别说明
+
+**Windows 不支持 native-tailscale 功能**（gvisor 限制）
+
+Windows 用户请查看 [WINDOWS.md](WINDOWS.md) 获取详细说明。
+
+简而言之：
+- ❌ 不能使用 native-tailscale
+- ✅ 自动使用 CLI 模式
+- ✅ 需要安装 Tailscale for Windows
 
 ---
 

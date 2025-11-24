@@ -3,12 +3,16 @@
 use anyhow::Result;
 use clap::Parser;
 use socktail::socks5::server::Socks5Server;
-use socktail::vpn::tailscale::TailscaleManager;
 use socktail::{crypto, utils};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+#[cfg(feature = "native-tailscale")]
+use socktail::vpn::tailscale_native::TailscaleNative;
+#[cfg(not(feature = "native-tailscale"))]
+use socktail::vpn::tailscale::TailscaleManager;
 
 #[derive(Parser, Debug)]
 #[command(name = "socktail")]
@@ -80,44 +84,95 @@ async fn main() -> Result<()> {
         info!("Control server: default Tailscale");
     }
 
-    // Connect to Tailscale (unless in dev mode or tailscale not available)
-    let no_vpn = args.no_vpn || !TailscaleManager::is_available();
+    // Connect to Tailscale (unless in dev mode)
+    if !args.no_vpn {
+        #[cfg(feature = "native-tailscale")]
+        {
+            // Use native libtailscale API
+            info!("Using native Tailscale implementation (libtailscale)");
 
-    if !no_vpn {
-        let mut ts_manager = TailscaleManager::new(hostname, authkey, control_url);
+            let mut ts = TailscaleNative::new()?;
 
-        ts_manager.connect()?;
+            // Configure Tailscale
+            ts.set_hostname(&hostname)?;
+            ts.set_authkey(&authkey)?;
 
-        // Check status
-        match ts_manager.status() {
-            Ok(status) => {
-                info!("Tailscale status: {}", status.backend_state);
-                if let Some(node) = status.self_node {
-                    info!("Node: {} (online: {})", node.hostname, node.online);
+            if let Some(ref url) = control_url {
+                ts.set_control_url(url)?;
+            }
+
+            // Set ephemeral mode for cleaner behavior
+            ts.set_ephemeral(true)?;
+
+            // Connect
+            ts.connect()?;
+
+            // Get and display IP addresses
+            match ts.get_ips() {
+                Ok(ips) => {
+                    info!("✅ Tailscale IPs: {}", ips);
+                }
+                Err(e) => {
+                    error!("Failed to get Tailscale IPs: {}", e);
                 }
             }
-            Err(e) => {
-                error!("Failed to get Tailscale status: {}", e);
+
+            // Set up graceful shutdown
+            let ts = Arc::new(Mutex::new(ts));
+            let ts_clone = ts.clone();
+
+            tokio::spawn(async move {
+                tokio::signal::ctrl_c().await.ok();
+                info!("🛑 Shutting down...");
+                let mut mgr = ts_clone.lock().await;
+                let _ = mgr.disconnect();
+                std::process::exit(0);
+            });
+        }
+
+        #[cfg(not(feature = "native-tailscale"))]
+        {
+            // Fallback to CLI-based implementation
+            info!("Using CLI-based Tailscale implementation");
+            info!("⚠️  For better performance, rebuild with native-tailscale feature");
+
+            use socktail::vpn::tailscale::TailscaleManager;
+
+            if !TailscaleManager::is_available() {
+                error!("Tailscale CLI not found!");
+                error!("Install tailscale or rebuild with native support:");
+                error!("  cargo build --release --features native-tailscale");
+                anyhow::bail!("Tailscale not available");
             }
+
+            let mut ts_manager = TailscaleManager::new(hostname, authkey, control_url);
+            ts_manager.connect()?;
+
+            match ts_manager.status() {
+                Ok(status) => {
+                    info!("Tailscale status: {}", status.backend_state);
+                    if let Some(node) = status.self_node {
+                        info!("Node: {} (online: {})", node.hostname, node.online);
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to get Tailscale status: {}", e);
+                }
+            }
+
+            let ts_manager = Arc::new(Mutex::new(ts_manager));
+            let ts_manager_clone = ts_manager.clone();
+
+            tokio::spawn(async move {
+                tokio::signal::ctrl_c().await.ok();
+                info!("🛑 Shutting down...");
+                let mut mgr = ts_manager_clone.lock().await;
+                let _ = mgr.disconnect();
+                std::process::exit(0);
+            });
         }
-
-        // Set up graceful shutdown
-        let ts_manager = Arc::new(Mutex::new(ts_manager));
-        let ts_manager_clone = ts_manager.clone();
-
-        tokio::spawn(async move {
-            tokio::signal::ctrl_c().await.ok();
-            info!("🛑 Shutting down...");
-            let mut mgr = ts_manager_clone.lock().await;
-            let _ = mgr.disconnect();
-            std::process::exit(0);
-        });
     } else {
-        if !TailscaleManager::is_available() {
-            info!("⚠️  Tailscale not found, running without VPN");
-        } else {
-            info!("⚠️  Running in dev mode (no VPN)");
-        }
+        info!("⚠️  Running in dev mode (no VPN)");
     }
 
     // Start SOCKS5 server

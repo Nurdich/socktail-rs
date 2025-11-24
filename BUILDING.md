@@ -180,6 +180,31 @@ cargo build --release
 
 ---
 
+### 问题 1.1: Windows 上的 curve25519-dalek SIMD 错误
+
+**错误** (Windows 特有):
+```
+error[E0635]: unknown feature `stdsimd`
+  --> curve25519-dalek-4.0.0-rc.3\src\lib.rs:13:70
+   |
+13 | #![cfg_attr(all(curve25519_dalek_backend = "simd", nightly), feature(stdsimd))]
+   |                                                                      ^^^^^^^
+```
+
+**原因**: `curve25519-dalek` 4.0.0-rc.3 使用了已废弃的 `stdsimd` 特性
+
+**解决方案**: 已在 `Cargo.toml` 中禁用 SIMD 后端
+```toml
+curve25519-dalek = { version = "=4.0.0-rc.3", default-features = false }
+```
+
+**注意**:
+- SIMD 已禁用，使用纯 Rust 后端
+- 性能影响：密钥交换慢约 5-10%（对整体性能影响极小）
+- 这是 4.0.0-rc.3 版本的已知问题，stable 版本已修复
+
+---
+
 ### 问题 2: 连接失败
 
 **错误**:

@@ -1,0 +1,10 @@
+# Cargo configuration for SockTail-RS
+
+# Windows compilation fix: Force curve25519-dalek to use serial backend
+# This avoids the stdsimd error on stable Rust
+[target.'cfg(windows)']
+rustflags = ["--cfg", "curve25519_dalek_backend=\"serial\""]
+
+# Alternative: uncomment below to apply to all platforms (slower but more compatible)
+# [build]
+# rustflags = ["--cfg", "curve25519_dalek_backend=\"serial\""]

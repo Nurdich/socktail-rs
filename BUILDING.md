@@ -193,15 +193,31 @@ error[E0635]: unknown feature `stdsimd`
 
 **原因**: `curve25519-dalek` 4.0.0-rc.3 使用了已废弃的 `stdsimd` 特性
 
-**解决方案**: 已在 `Cargo.toml` 中禁用 SIMD 后端
+**✅ 解决方案**: 已通过 `.cargo/config.toml` 自动修复！
+
+项目包含以下配置文件，自动在 Windows 上使用 serial 后端：
+
 ```toml
-curve25519-dalek = { version = "=4.0.0-rc.3", default-features = false }
+# .cargo/config.toml
+[target.'cfg(windows)']
+rustflags = ["--cfg", "curve25519_dalek_backend=\"serial\""]
 ```
 
-**注意**:
-- SIMD 已禁用，使用纯 Rust 后端
-- 性能影响：密钥交换慢约 5-10%（对整体性能影响极小）
-- 这是 4.0.0-rc.3 版本的已知问题，stable 版本已修复
+**现在只需要**:
+```powershell
+# Windows 用户直接构建即可，无需额外配置
+cargo build --release
+```
+
+**性能影响**:
+- 密钥交换: +5-10% 延迟
+- 整体应用: <1% 影响（可忽略）
+- Linux/macOS: 无影响（仍使用优化后端）
+
+**技术说明**:
+- `.cargo/config.toml` 仅在 Windows 上应用此修复
+- Linux 和 macOS 继续使用高性能 SIMD 后端
+- 这是 4.0.0-rc.3 的临时解决方案，等待 boringtun 更新
 
 ---
 

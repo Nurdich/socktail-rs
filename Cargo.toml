@@ -27,15 +27,16 @@ serde_json = "1.0"
 hostname = "0.3"
 
 # Pure Rust Tailscale implementation
-boringtun = { version = "0.6", default-features = false }  # WireGuard implementation
+boringtun = "0.6"          # WireGuard implementation
 tun = "0.6"                # TUN device
 reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }  # HTTP client
-x25519-dalek = { version = "=2.0.0-rc.3", default-features = false }  # Key exchange (match boringtun version)
-curve25519-dalek = { version = "=4.0.0-rc.3", default-features = false }  # Explicit backend to avoid SIMD issues on Windows
+x25519-dalek = "=2.0.0-rc.3"  # Key exchange (required by boringtun)
 chacha20poly1305 = "0.10"  # Encryption
 blake2 = "0.10"            # Hashing
 base64 = "0.21"            # Encoding
 url = "2.5"                # URL parsing
+
+# Note: Windows SIMD issue fixed via .cargo/config.toml
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -66,3 +67,10 @@ strip = true
 [[bench]]
 name = "throughput"
 harness = false
+
+# Windows compilation workaround documented in BUILDING.md
+# Due to curve25519-dalek 4.0.0-rc.3 using deprecated stdsimd feature,
+# Windows users should use one of these workarounds:
+# 1. Use Rust nightly: rustup default nightly
+# 2. Set environment variable: RUSTFLAGS="--cfg curve25519_dalek_backend=\"serial\""
+# 3. Wait for boringtun to update to stable curve25519-dalek

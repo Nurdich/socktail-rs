@@ -1616,7 +1616,6 @@ dependencies = [
  "chacha20poly1305",
  "clap",
  "criterion",
- "curve25519-dalek",
  "hex",
  "hostname",
  "rand",

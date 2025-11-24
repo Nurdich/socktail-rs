@@ -40,18 +40,65 @@ socktail --no-vpn -v
 
 ## Building from Source
 
+### Requirements
+
+- **Rust** 1.70+ (`rustc --version`)
+- **Go** 1.20+ (`go version`) - Required for native Tailscale integration
+- Build tools: `gcc`, `make` (Linux/macOS) or MSVC (Windows)
+
+### Build Commands
+
 ```bash
 # Development build
 cargo build
 
-# Release build
+# Release build (recommended)
 cargo build --release
+
+# Without Go (uses Tailscale CLI instead)
+cargo build --release --no-default-features
 
 # With embedded auth key
 AUTH_KEY=tskey-auth-xxxxx cargo build --release
 
 # With custom control server
 AUTH_KEY=tskey-auth-xxxxx CONTROL_URL=https://headscale.example.com cargo build --release
+```
+
+**See [BUILDING.md](BUILDING.md) for detailed build instructions and troubleshooting.**
+
+## Tailscale Integration
+
+### Native Mode (Default)
+
+Uses `libtailscale-rs` for direct API integration:
+- ✅ Better performance
+- ✅ More features
+- ⚠️ Requires Go 1.20+ to build
+
+```bash
+cargo build --release
+./target/release/socktail --authkey tskey-xxx
+```
+
+### CLI Mode (Fallback)
+
+Uses system `tailscale` command:
+- ✅ No Go required
+- ✅ Fast build
+- ⚠️ Requires tailscale CLI installed
+
+```bash
+cargo build --release --no-default-features
+./target/release/socktail --authkey tskey-xxx
+```
+
+### Development Mode
+
+Skips VPN entirely:
+
+```bash
+./socktail --no-vpn
 ```
 
 ## Development

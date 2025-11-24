@@ -25,49 +25,41 @@ fn main() {
 
 #[cfg(feature = "native-tailscale")]
 fn build_libtailscale() {
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let libtailscale_dir = out_dir.join("libtailscale");
+    use std::path::Path;
 
-    // Check if libtailscale directory exists
-    if !libtailscale_dir.exists() {
-        println!("cargo:warning=Cloning libtailscale repository...");
+    let project_root = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let lib_dir = Path::new(&project_root).join("lib");
+    let lib_file = lib_dir.join("libtailscale.a");
 
-        // Clone libtailscale repository
-        let status = Command::new("git")
-            .args(&[
-                "clone",
-                "https://github.com/tailscale/libtailscale.git",
-                libtailscale_dir.to_str().unwrap(),
-            ])
-            .status();
+    // Check if pre-compiled library exists in lib/ directory
+    if lib_file.exists() {
+        println!("cargo:warning=Found pre-compiled libtailscale.a in lib/ directory");
+        println!("cargo:rustc-link-search=native={}", lib_dir.display());
+        println!("cargo:rustc-link-lib=static=tailscale");
 
-        if status.is_err() || !status.unwrap().success() {
-            println!("cargo:warning=Failed to clone libtailscale. Install manually or use CLI mode.");
-            println!("cargo:warning=See: https://github.com/tailscale/libtailscale");
-            return;
+        // Link required system libraries for Go runtime
+        #[cfg(target_os = "linux")]
+        {
+            println!("cargo:rustc-link-lib=pthread");
+            println!("cargo:rustc-link-lib=dl");
         }
-    }
 
-    // Build libtailscale static library
-    println!("cargo:warning=Building libtailscale (this may take a while on first build)...");
+        #[cfg(target_os = "macos")]
+        {
+            println!("cargo:rustc-link-lib=framework=CoreFoundation");
+            println!("cargo:rustc-link-lib=framework=Security");
+        }
 
-    let status = Command::new("make")
-        .arg("archive")
-        .current_dir(&libtailscale_dir)
-        .status();
-
-    if status.is_err() || !status.unwrap().success() {
-        println!("cargo:warning=Failed to build libtailscale.");
-        println!("cargo:warning=Make sure Go is installed and in PATH.");
-        println!("cargo:warning=Falling back to CLI mode.");
+        println!("cargo:rerun-if-changed={}", lib_file.display());
         return;
     }
 
-    // Link the library
-    println!("cargo:rustc-link-search=native={}", libtailscale_dir.display());
+    // Check system directories
+    println!("cargo:warning=Checking system directories for libtailscale...");
+
+    // Try linking from system paths
     println!("cargo:rustc-link-lib=static=tailscale");
 
-    // Link required system libraries for Go runtime
     #[cfg(target_os = "linux")]
     {
         println!("cargo:rustc-link-lib=pthread");
@@ -80,8 +72,8 @@ fn build_libtailscale() {
         println!("cargo:rustc-link-lib=framework=Security");
     }
 
-    println!("cargo:warning=libtailscale built successfully!");
-    println!("cargo:rerun-if-changed={}", libtailscale_dir.display());
+    println!("cargo:warning=If build fails, place libtailscale.a in the lib/ directory");
+    println!("cargo:warning=Create lib/ directory and copy libtailscale.a there");
 }
 
 fn xor_encode(data: &[u8]) -> Vec<u8> {

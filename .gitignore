@@ -22,3 +22,5 @@ dist/
 
 # Testing
 coverage/
+lib/libtailscale.a
+lib/libtailscale.h
